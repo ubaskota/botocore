@@ -383,7 +383,7 @@ class IMDSFetcher:
         env=None,
         user_agent=None,
         config=None,
-        use_extended_api=None,
+        use_extended_api=True,
     ):
         self._timeout = timeout
         self._num_attempts = num_attempts
@@ -527,7 +527,8 @@ class IMDSFetcher:
                     e,
                     exc_info=True,
                 )
-        raise self._RETRIES_EXCEEDED_ERROR_CLS()
+        if not self._use_extended_api:
+            raise self._RETRIES_EXCEEDED_ERROR_CLS()
 
     def _add_user_agent(self, headers):
         if self._user_agent is not None:
