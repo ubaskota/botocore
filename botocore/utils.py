@@ -62,7 +62,7 @@ from botocore.compat import (
     urlunsplit,
     zip_longest,
 )
-from botocore.exceptions import (
+from botocore.exceptions import (  # UnableToGetProfileNameError,
     ClientError,
     ConfigNotFound,
     ConnectionClosedError,
@@ -82,7 +82,6 @@ from botocore.exceptions import (
     ReadTimeoutError,
     SSOTokenLoadError,
     UnableToGetCredentialsError,
-    UnableToGetProfileNameError,
     UnsupportedOutpostResourceError,
     UnsupportedS3AccesspointConfigurationError,
     UnsupportedS3ArnError,
@@ -405,8 +404,6 @@ class IMDSFetcher:
             timeout=self._timeout,
             proxies=get_environ_proxies(self._base_url),
         )
-        if env is None:
-            env = os.environ.copy()
         self.resolvedProfile = None
 
     def get_base_url(self):
@@ -633,16 +630,19 @@ class InstanceMetadataFetcher(IMDSFetcher):
                     break
                 elif role_name_response.status_code == 404:
                     self._perform_fallback()
-            except RETRYABLE_HTTP_ERRORS:
+            except self._RETRIES_EXCEEDED_ERROR_CLS:
                 self._perform_fallback()
             retry_count += 1
+        if role_name is None:
+            raise self._RETRIES_EXCEEDED_ERROR_CLS()
         return role_name
 
     def _perform_fallback(self):
         if self._use_extended_api is None:
             self._use_extended_api = False
         else:
-            raise UnableToGetProfileNameError()
+            # raise UnableToGetProfileNameError()
+            raise self._RETRIES_EXCEEDED_ERROR_CLS()
 
     def get_user_defined_profile_name(self):
         if os.environ.get('AWS_EC2_INSTANCE_PROFILE_NAME'):
