@@ -527,8 +527,7 @@ class IMDSFetcher:
                     e,
                     exc_info=True,
                 )
-        if not self._use_extended_api:
-            raise self._RETRIES_EXCEEDED_ERROR_CLS()
+        raise self._RETRIES_EXCEEDED_ERROR_CLS()
 
     def _add_user_agent(self, headers):
         if self._user_agent is not None:
@@ -611,11 +610,11 @@ class InstanceMetadataFetcher(IMDSFetcher):
         return {}
 
     def resolve_if_user_defined_profile_name(self):
-        role_name = None
-        if self.has_user_defined_profile_name():
-            role_name = self.get_user_defined_profile_name()
-            if not self.has_valid_user_defined_profile_name(role_name):
-                raise Ec2ProfileNameMisconfigurationError()
+        role_name = self.get_user_defined_profile_name()
+        if role_name and not self.has_valid_user_defined_profile_name(
+            role_name
+        ):
+            raise Ec2ProfileNameMisconfigurationError()
         elif self.resolvedProfile:
             role_name = self.resolvedProfile
         return role_name
@@ -624,33 +623,34 @@ class InstanceMetadataFetcher(IMDSFetcher):
         retry_count = 0
         role_name = None
         while role_name is None and retry_count < 2:
-            role_name_response = self._get_iam_role(token)
-            if role_name_response.status_code == 200:
-                role_name = role_name_response.text
-                if self._use_extended_api is None:
-                    self._use_extended_api = True
-                self.resolvedProfile = role_name
-                break
-            elif role_name_response.status_code == 404:
-                if self._use_extended_api is None:
-                    self._use_extended_api = False
-                else:
-                    raise UnableToGetProfileNameError()
+            try:
+                role_name_response = self._get_iam_role(token)
+                if role_name_response.status_code == 200:
+                    role_name = role_name_response.text
+                    if self._use_extended_api is None:
+                        self._use_extended_api = True
+                    self.resolvedProfile = role_name
+                    break
+                elif role_name_response.status_code == 404:
+                    self._perform_fallback()
+            except RETRYABLE_HTTP_ERRORS:
+                self._perform_fallback()
             retry_count += 1
         return role_name
 
-    def has_user_defined_profile_name(self):
-        if os.environ.get('AWS_EC2_INSTANCE_PROFILE_NAME') or self._config.get(
-            'ec2_instance_profile_name'
-        ):
-            return True
-        return False
+    def _perform_fallback(self):
+        if self._use_extended_api is None:
+            self._use_extended_api = False
+        else:
+            raise UnableToGetProfileNameError()
 
     def get_user_defined_profile_name(self):
         if os.environ.get('AWS_EC2_INSTANCE_PROFILE_NAME'):
             return os.environ.get('AWS_EC2_INSTANCE_PROFILE_NAME')
-        else:
+        elif self._config.get('ec2_instance_profile_name'):
             return self._config.get('ec2_instance_profile_name')
+        else:
+            return None
 
     def _get_iam_role(self, token=None):
         if self._use_extended_api is None or self._use_extended_api:
