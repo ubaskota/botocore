@@ -628,7 +628,7 @@ class InstanceMetadataFetcher(IMDSFetcher):
                         self._use_extended_api = True
                     self.resolvedProfile = role_name
                     break
-                elif role_name_response.status_code == 404:
+                else:
                     self._perform_fallback()
             except self._RETRIES_EXCEEDED_ERROR_CLS:
                 self._perform_fallback()
@@ -638,7 +638,7 @@ class InstanceMetadataFetcher(IMDSFetcher):
         return role_name
 
     def _perform_fallback(self):
-        if self._use_extended_api is None:
+        if self._use_extended_api is None or self._use_extended_api is True:
             self._use_extended_api = False
         else:
             # raise UnableToGetProfileNameError()
