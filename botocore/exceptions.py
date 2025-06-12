@@ -834,10 +834,6 @@ class UnsupportedServiceProtocolsError(BotoCoreError):
     )
 
 
-# class UnableToGetProfileNameError(BotoCoreError):
-#     fmt = "Error: Unable to get profile name"
-
-
 class Ec2RoleNameMisconfigurationError(BotoCoreError):
     fmt = "Error: Invalid role name for ec2_instance_profile_name. Role names must not be empty or contain only whitespace characters."
 

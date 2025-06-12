@@ -62,7 +62,7 @@ from botocore.compat import (
     urlunsplit,
     zip_longest,
 )
-from botocore.exceptions import (  # UnableToGetProfileNameError,
+from botocore.exceptions import (
     ClientError,
     ConfigNotFound,
     ConnectionClosedError,
@@ -578,7 +578,7 @@ class InstanceMetadataFetcher(IMDSFetcher):
         try:
             token = self._fetch_metadata_token()
             role_name = self._get_role_name(token)
-            credentials = self._resolve_get_credentials(role_name, token)
+            credentials = self._get_iam_role_credentials(role_name, token)
             if credentials:
                 register_feature_id('CREDENTIALS_IMDS')
                 return credentials
@@ -621,7 +621,6 @@ class InstanceMetadataFetcher(IMDSFetcher):
         if self._use_extended_api is None or self._use_extended_api is True:
             self._use_extended_api = False
         else:
-            # raise UnableToGetProfileNameError()
             raise self._RETRIES_EXCEEDED_ERROR_CLS()
 
     def get_user_defined_role_name(self):
@@ -649,16 +648,13 @@ class InstanceMetadataFetcher(IMDSFetcher):
             retry_func=self._needs_retry_for_credentials,
             token=token,
         )
-        return r
+        return json.loads(r.text)
 
-    def _resolve_get_credentials(self, role_name, token):
+    def _get_iam_role_credentials(self, role_name, token):
         try:
             for _ in range(2):
                 try:
-                    credentials_response = self._get_credentials(
-                        role_name, token
-                    )
-                    credentials = json.loads(credentials_response.text)
+                    credentials = self._get_credentials(role_name, token)
                     if self._use_extended_api is None:
                         self._use_extended_api = True
                     if self._contains_all_credential_fields(credentials):
