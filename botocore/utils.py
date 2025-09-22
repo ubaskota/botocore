@@ -22,6 +22,7 @@ import os
 import random
 import re
 import socket
+import stat
 import tempfile
 import time
 import warnings
@@ -3585,7 +3586,7 @@ class JSONFileCache:
             if os.name == 'posix':
                 os.fchmod(temp_fd, 0o600)
             else:
-                os.chmod(temp_fd, 0o600)
+                os.chmod(temp_path, stat.S_IREAD | stat.S_IWRITE)
             with os.fdopen(temp_fd, 'w') as f:
                 temp_fd = None
                 f.write(file_content)
