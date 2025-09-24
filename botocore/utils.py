@@ -3583,9 +3583,11 @@ class JSONFileCache:
             temp_fd, temp_path = tempfile.mkstemp(
                 dir=self._working_dir, suffix='.tmp'
             )
-            if os.name == 'posix':
-                os.fchmod(temp_fd, 0o600)
-            else:
+            # if os.name == 'posix':
+            #     os.fchmod(temp_fd, 0o600)
+            # else:
+            #     os.chmod(temp_path, stat.S_IREAD | stat.S_IWRITE)
+            if os.chmod:
                 os.chmod(temp_path, stat.S_IREAD | stat.S_IWRITE)
             with os.fdopen(temp_fd, 'w') as f:
                 temp_fd = None

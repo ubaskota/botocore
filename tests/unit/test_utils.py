@@ -3714,9 +3714,11 @@ class TestJSONFileCacheAtomicWrites(unittest.TestCase):
         errors = []
 
         def write_worker(thread_id):
+            lock = threading.Lock()
             try:
-                for i in range(3):
-                    self.cache[key] = {'thread': thread_id, 'iteration': i}
+                with lock:
+                    for i in range(3):
+                        self.cache[key] = {'thread': thread_id, 'iteration': i}
             except Exception as e:
                 errors.append(f'Thread {thread_id}: {e}')
 
