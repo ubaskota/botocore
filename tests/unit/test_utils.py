@@ -3712,9 +3712,9 @@ class TestJSONFileCacheAtomicWrites(unittest.TestCase):
 
         key = 'concurrent_test'
         errors = []
+        lock = threading.Lock()
 
         def write_worker(thread_id):
-            lock = threading.Lock()
             try:
                 with lock:
                     for i in range(3):
