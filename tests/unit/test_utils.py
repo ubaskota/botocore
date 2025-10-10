@@ -3706,19 +3706,17 @@ class TestJSONFileCacheAtomicWrites(unittest.TestCase):
 
         assert '.tmp' in temp_path
 
-    def test_concurrent_writes_same_key(self):
+    def test_concurrent_writes_to_multiple_temp_files(self):
         """Test concurrent writes to same key don't cause corruption."""
         import threading
 
-        key = 'concurrent_test'
         errors = []
-        lock = threading.Lock()
 
         def write_worker(thread_id):
             try:
-                with lock:
-                    for i in range(3):
-                        self.cache[key] = {'thread': thread_id, 'iteration': i}
+                key = f'concurrent_test_{thread_id}'
+                for i in range(3):
+                    self.cache[key] = {'thread': thread_id, 'iteration': i}
             except Exception as e:
                 errors.append(f'Thread {thread_id}: {e}')
 
@@ -3733,10 +3731,13 @@ class TestJSONFileCacheAtomicWrites(unittest.TestCase):
 
         self.assertEqual(len(errors), 0, f'Concurrent write errors: {errors}')
 
-        # Verify final data is valid
-        final_data = self.cache[key]
-        self.assertIsInstance(final_data, dict)
-        self.assertIn('thread', final_data)
+        for thread_id in range(3):
+            key = f'concurrent_test_{thread_id}'
+            final_data = self.cache[key]
+            self.assertIsInstance(final_data, dict)
+            self.assertEqual(final_data['thread'], thread_id)
+            self.assertIn('thread', final_data)
+            self.assertIn('iteration', final_data)
 
     def test_atomic_write_preserves_data_on_failure(self):
         """Test write failures don't corrupt existing data."""
